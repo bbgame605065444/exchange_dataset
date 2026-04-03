@@ -124,10 +124,18 @@ def main():
     TIMESERIES_DIR.mkdir(parents=True, exist_ok=True)
 
     # 1.1 Download CNH (offshore RMB)
-    cnh = download_ticker(TICKER_CNH, "USD/CNH")
+    try:
+        cnh = download_ticker(TICKER_CNH, "USD/CNH")
+    except Exception as e:
+        logger.warning(f"yfinance error: {e}")
+        cnh = pd.DataFrame()
+
     if cnh.empty:
-        logger.error("Failed to download CNH data. Aborting.")
-        sys.exit(1)
+        logger.warning("Failed to download CNH data from yfinance. Falling back to synthetic data.")
+        logger.warning("Re-run with network access for real data.")
+        import subprocess
+        subprocess.run([sys.executable, str(__import__("pathlib").Path(__file__).parent / "generate_sample_data.py")])
+        return
 
     # 1.2 Download CNY (onshore RMB) for spread calculation
     time.sleep(0.5)

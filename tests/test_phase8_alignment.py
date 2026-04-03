@@ -25,23 +25,25 @@ class TestLoadParquetSafe:
         assert df.empty
 
 
-class TestLoadNewsByDate:
-    def test_groups_by_date(self, sample_news_jsonl):
-        from phase8_alignment import load_news_by_date
+class TestLoadNewsAligned:
+    def test_assigns_news_to_trading_days(self, sample_news_jsonl):
+        from phase8_alignment import load_news_aligned
         gdelt_path, _ = sample_news_jsonl
-        result = load_news_by_date(gdelt_path.parent)
-        assert isinstance(result, dict)
-        assert len(result) > 0
-        for date_key, titles in result.items():
-            # Date key should be YYYY-MM-DD format
-            assert len(date_key) == 10
-            assert isinstance(titles, list)
-            assert all(isinstance(t, str) for t in titles)
+        trading_dates = pd.bdate_range("2025-03-01", "2025-03-31")
+        result = load_news_aligned([gdelt_path.parent], trading_dates)
+        assert isinstance(result, pd.DataFrame)
+        assert "news_count" in result.columns
+        assert "news_titles" in result.columns
+        assert len(result) == len(trading_dates)
+        # Some days should have news
+        assert result["news_count"].sum() > 0
 
     def test_empty_dir(self, tmp_path):
-        from phase8_alignment import load_news_by_date
-        result = load_news_by_date(tmp_path)
-        assert result == {}
+        from phase8_alignment import load_news_aligned
+        trading_dates = pd.bdate_range("2025-01-01", "2025-01-10")
+        result = load_news_aligned([tmp_path], trading_dates)
+        assert isinstance(result, pd.DataFrame)
+        assert (result["news_count"] == 0).all()
 
 
 class TestAlignment:
@@ -49,7 +51,7 @@ class TestAlignment:
                                      sample_spread, sample_macro,
                                      sample_news_jsonl):
         """Run alignment on sample data and verify output structure."""
-        from phase8_alignment import load_parquet_safe, load_news_by_date
+        from phase8_alignment import load_parquet_safe
         import config
 
         # Temporarily redirect paths to test data

@@ -57,10 +57,11 @@ class TestFetchFredSeries:
         assert result.empty
 
 
-class TestMainExitsWithoutKey:
-    def test_exits_without_fred_key(self):
-        """main() should exit if FRED_API_KEY is not set."""
+class TestMainSkipsWithoutKey:
+    def test_returns_without_fred_key(self):
+        """main() should return gracefully if FRED_API_KEY is not set."""
         with patch("phase2_macro.FRED_API_KEY", ""):
-            with pytest.raises(SystemExit):
-                from phase2_macro import main
-                main()
+            from phase2_macro import main
+            # Should return None (skip) rather than sys.exit
+            result = main()
+            assert result is None

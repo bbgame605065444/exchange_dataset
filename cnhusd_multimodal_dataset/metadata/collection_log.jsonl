@@ -1,0 +1,13 @@
+{"source": "yfinance/CNH", "status": "failed", "detail": "no data returned", "n_records": 0, "ts": "2026-04-03T12:19:50.673327+00:00"}
+{"source": "synthetic/prices", "status": "ok", "detail": "fallback", "n_records": 1369, "ts": "2026-04-03T12:19:50.724252+00:00"}
+{"source": "FRED", "status": "skipped", "detail": "FRED_API_KEY not set", "n_records": 0, "ts": "2026-04-03T12:19:50.724360+00:00"}
+{"source": "synthetic/macro", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:19:50.740263+00:00"}
+{"source": "GDELT", "status": "ok", "detail": "", "n_records": 0, "ts": "2026-04-03T12:20:00.528858+00:00"}
+{"source": "Finnhub/news", "status": "skipped", "detail": "FINNHUB_API_KEY not set", "n_records": 0, "ts": "2026-04-03T12:20:00.528996+00:00"}
+{"source": "synthetic/news", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:20:00.529716+00:00"}
+{"source": "HuggingFace/FOMC", "status": "skipped", "detail": "datasets not installed", "n_records": 0, "ts": "2026-04-03T12:20:00.530029+00:00"}
+{"source": "Fed/statements", "status": "failed", "detail": "HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /monetarypolicy/fomccalenda", "n_records": 0, "ts": "2026-04-03T12:20:00.535486+00:00"}
+{"source": "Finnhub/calendar", "status": "skipped", "detail": "no key", "n_records": 0, "ts": "2026-04-03T12:20:00.535591+00:00"}
+{"source": "synthetic/central_bank", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:20:00.535931+00:00"}
+{"source": "charts", "status": "ok", "detail": "every 10th day", "n_records": 0, "ts": "2026-04-03T12:20:00.850099+00:00"}
+{"source": "alignment", "status": "ok", "detail": "", "n_records": 0, "ts": "2026-04-03T12:20:01.133874+00:00"}

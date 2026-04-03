@@ -37,12 +37,12 @@ def fetch_fred_series(fred, series_dict: dict) -> pd.DataFrame:
 
 def main():
     if not FRED_API_KEY:
-        logger.error(
-            "FRED_API_KEY not set. Export it:\n"
+        logger.warning(
+            "FRED_API_KEY not set — skipping Phase 2.\n"
             "  export FRED_API_KEY='your_key_here'\n"
             "Get a free key at: https://fred.stlouisfed.org/docs/api/api_key.html"
         )
-        sys.exit(1)
+        return
 
     try:
         from fredapi import Fred
