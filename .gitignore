@@ -1,0 +1,33 @@
+# Data files (too large for git, regenerate with scripts)
+cnhusd_multimodal_dataset/timeseries/*.parquet
+cnhusd_multimodal_dataset/macro/*.parquet
+cnhusd_multimodal_dataset/text/**/*.jsonl
+cnhusd_multimodal_dataset/text/**/*.csv
+cnhusd_multimodal_dataset/sentiment/*.parquet
+cnhusd_multimodal_dataset/images/candlestick/*.png
+cnhusd_multimodal_dataset/images/gaf/*.npy
+cnhusd_multimodal_dataset/aligned/*.parquet
+cnhusd_multimodal_dataset/explanations/*.jsonl
+
+# Keep directory structure
+!cnhusd_multimodal_dataset/**/
+!cnhusd_multimodal_dataset/**/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env

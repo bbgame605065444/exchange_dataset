@@ -1,0 +1,46 @@
+{
+  "dataset_name": "CNH/USD Multimodal Explainable Prediction Dataset",
+  "target_pair": "USD/CNH",
+  "date_range": {
+    "start": "2021-01-01",
+    "end": "2026-03-31"
+  },
+  "frequency": "daily",
+  "modalities": ["timeseries", "text", "image"],
+  "data_sources": {
+    "price": {
+      "primary": "yfinance (CNH=X, CNY=X)",
+      "auxiliary": "yfinance (DX-Y.NYB, ^VIX)",
+      "pboc_proxy": "FRED DEXCHUS"
+    },
+    "macro": {
+      "primary": "FRED API",
+      "series_count": 12,
+      "indicators": [
+        "FEDFUNDS", "CPIAUCSL", "MANEMP", "BOPGSTB", "DGS10",
+        "M2SL", "UNRATE", "INDPRO", "RSAFS",
+        "CHNCPIALLMINMEI", "TRESEGCNM052N", "DEXCHUS"
+      ]
+    },
+    "news_en": {
+      "gdelt": "GDELT DOC API (recent 3 months)",
+      "finnhub": "Finnhub News API (forex category)",
+      "hf": "Brianferrell787/financial-news-multisource (optional)"
+    },
+    "central_bank": {
+      "fomc_labeled": "gtfintechlab/fomc_communication (HuggingFace)",
+      "fed_statements": "Federal Reserve website",
+      "economic_calendar": "Finnhub Economic Calendar API"
+    },
+    "sentiment": {
+      "english": "ProsusAI/finbert",
+      "central_bank": "facebook/bart-large-mnli (zero-shot)"
+    },
+    "charts": {
+      "tool": "mplfinance",
+      "lookbacks": ["5d", "20d", "60d"],
+      "size": "384x384 pixels"
+    }
+  },
+  "reference": "Yu et al. 'Temporal Data Meets LLM' (EMNLP 2023)"
+}

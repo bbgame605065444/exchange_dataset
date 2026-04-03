@@ -1,0 +1,16 @@
+yfinance>=0.2.31
+fredapi>=0.5.1
+gdeltdoc>=1.5.0
+pandas>=2.0
+pandas-ta>=0.3.14
+mplfinance>=0.12.10
+pyts>=0.13.0
+transformers>=4.37
+torch>=2.0
+datasets>=2.16
+requests>=2.31
+beautifulsoup4>=4.12
+pymupdf>=1.23
+lxml>=4.9
+pyarrow>=14.0
+finnhub-python>=2.4.19
