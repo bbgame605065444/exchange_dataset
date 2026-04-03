@@ -137,62 +137,100 @@ def generate_macro_data():
 
 
 def generate_news_data():
-    """Generate sample news data."""
+    """Generate synthetic English news across the full 5-year date range."""
     NEWS_EN_DIR.mkdir(parents=True, exist_ok=True)
 
-    sample_headlines = [
-        ("2026-01-15", "Yuan weakens against dollar amid trade tensions", "Reuters"),
-        ("2026-01-16", "PBOC sets midpoint rate stronger than expected", "Bloomberg"),
-        ("2026-01-17", "Fed signals potential rate cut in March meeting", "CNBC"),
-        ("2026-01-20", "China GDP growth beats expectations at 5.2%", "FT"),
-        ("2026-01-21", "US-China trade talks resume in Washington", "AP"),
-        ("2026-01-22", "Capital outflows from China accelerate in January", "Reuters"),
-        ("2026-01-23", "Dollar index hits 3-month low on dovish Fed", "Bloomberg"),
-        ("2026-01-24", "PBOC cuts reserve requirement ratio by 50bps", "Xinhua"),
-        ("2026-02-01", "Yuan rallies on positive trade balance data", "Reuters"),
-        ("2026-02-05", "Federal Reserve holds rates steady as expected", "WSJ"),
-        ("2026-02-10", "China manufacturing PMI expands for third month", "Caixin"),
-        ("2026-02-15", "US CPI data comes in hotter than expected", "Bloomberg"),
-        ("2026-02-20", "Offshore yuan drops to two-week low on risk aversion", "FT"),
-        ("2026-03-01", "PBOC maintains stability in daily fixing signal", "Reuters"),
-        ("2026-03-10", "China FX reserves rise to $3.25 trillion", "Bloomberg"),
-        ("2026-03-15", "US tariff announcement shakes forex markets", "CNBC"),
-        ("2026-03-20", "Yuan-dollar volatility hits 6-month high", "Reuters"),
-        ("2026-03-25", "Federal Reserve cuts rate by 25bps, signals pause", "WSJ"),
-        ("2026-03-28", "China trade surplus widens to record $78 billion", "Bloomberg"),
-        ("2026-03-31", "Q1 review: Yuan depreciated 2.3% against dollar", "FT"),
+    templates = [
+        ("Yuan {dir} against dollar amid {catalyst}", "Reuters"),
+        ("PBOC sets midpoint rate {adj} than expected", "Bloomberg"),
+        ("Fed {action} in {month} meeting, dollar {dxy_dir}", "CNBC"),
+        ("China GDP growth {meets} expectations at {gdp}%", "FT"),
+        ("US-China trade talks {progress}", "AP"),
+        ("Capital {flow} China {verb} in {month}", "Reuters"),
+        ("Dollar index hits {period} {extreme} on {reason}", "Bloomberg"),
+        ("PBOC {pboc_action}", "Xinhua"),
+        ("Yuan {dir2} on {data_type} data", "Reuters"),
+        ("Federal Reserve {fed_action}", "WSJ"),
+        ("China manufacturing PMI {pmi_dir} for {nth} month", "Caixin"),
+        ("US CPI data comes in {temp} than expected", "Bloomberg"),
+        ("Offshore yuan {move} to {period2} {extreme2}", "FT"),
+        ("China FX reserves {dir3} to ${reserves} trillion", "Bloomberg"),
+        ("US tariff announcement {impact} forex markets", "CNBC"),
+        ("Yuan-dollar volatility hits {period3} {extreme3}", "Reuters"),
     ]
 
-    # GDELT format
-    with open(NEWS_EN_DIR / "gdelt_cnhusd.jsonl", "w") as f:
-        for date, title, source in sample_headlines:
-            record = {
-                "url": f"https://example.com/news/{date}",
-                "title": title,
-                "seendate": f"{date}T12:00:00Z",
-                "source": source,
-                "domain": f"{source.lower()}.com",
-                "language": "English",
-                "tone": np.random.uniform(-5, 5),
-                "query_group": "yuan dollar",
-            }
-            f.write(json.dumps(record) + "\n")
+    dates = pd.bdate_range(start=START_DATE, end=END_DATE)
+    articles = []
+    for d in dates:
+        if np.random.random() > 0.4:  # ~60% of days have news
+            n = np.random.randint(1, 4)
+            for _ in range(n):
+                tmpl_text, source = templates[np.random.randint(0, len(templates))]
+                title = tmpl_text.format(
+                    dir=np.random.choice(["weakens", "strengthens", "steadies"]),
+                    dir2=np.random.choice(["rallies", "slips", "edges higher"]),
+                    dir3=np.random.choice(["rise", "fall", "hold steady"]),
+                    catalyst=np.random.choice(["trade tensions", "risk aversion", "rate expectations", "data surprise"]),
+                    adj=np.random.choice(["stronger", "weaker"]),
+                    action=np.random.choice(["signals rate cut", "holds rates steady", "raises rates"]),
+                    month=np.random.choice(["January", "March", "June", "September", "December"]),
+                    dxy_dir=np.random.choice(["surges", "retreats", "holds"]),
+                    meets=np.random.choice(["beats", "misses", "meets"]),
+                    gdp=round(np.random.uniform(4.0, 6.5), 1),
+                    progress=np.random.choice(["resume in Washington", "stall over subsidies", "reach tentative deal"]),
+                    flow=np.random.choice(["outflows from", "inflows to"]),
+                    verb=np.random.choice(["accelerate", "slow", "stabilize"]),
+                    period=np.random.choice(["3-month", "6-month", "1-year"]),
+                    extreme=np.random.choice(["high", "low"]),
+                    reason=np.random.choice(["dovish Fed", "hawkish Fed", "strong jobs data", "weak PMI"]),
+                    pboc_action=np.random.choice(["cuts reserve requirement ratio by 50bps",
+                                                    "injects $20B via MLF", "maintains stability in daily fixing",
+                                                    "strengthens counter-cyclical factor"]),
+                    data_type=np.random.choice(["positive trade balance", "weak export", "strong PMI"]),
+                    fed_action=np.random.choice(["holds rates steady as expected",
+                                                  "cuts rate by 25bps, signals pause",
+                                                  "raises rate by 25bps, remains hawkish"]),
+                    pmi_dir=np.random.choice(["expands", "contracts"]),
+                    nth=np.random.choice(["second", "third", "fourth"]),
+                    temp=np.random.choice(["hotter", "cooler"]),
+                    move=np.random.choice(["drops", "surges", "edges"]),
+                    period2=np.random.choice(["two-week", "one-month", "three-month"]),
+                    extreme2=np.random.choice(["low", "high"]),
+                    reserves=round(np.random.uniform(3.0, 3.3), 2),
+                    impact=np.random.choice(["shakes", "boosts", "weighs on"]),
+                    period3=np.random.choice(["3-month", "6-month", "1-year"]),
+                    extreme3=np.random.choice(["high", "low"]),
+                )
+                articles.append({
+                    "url": f"https://example.com/news/{d.strftime('%Y%m%d')}/{len(articles)}",
+                    "title": title,
+                    "seendate": f"{d.strftime('%Y-%m-%d')}T{np.random.randint(6,22):02d}:{np.random.randint(0,60):02d}:00Z",
+                    "source": source,
+                    "domain": f"{source.lower().replace(' ', '')}.com",
+                    "language": "English",
+                    "tone": float(np.random.uniform(-5, 5)),
+                    "query_group": "yuan dollar",
+                })
 
-    # Finnhub format
+    with open(NEWS_EN_DIR / "gdelt_cnhusd.jsonl", "w") as f:
+        for a in articles:
+            f.write(json.dumps(a) + "\n")
+
+    # Finnhub format — subset
     with open(NEWS_EN_DIR / "finnhub_forex.jsonl", "w") as f:
-        for date, title, source in sample_headlines[:10]:
+        for a in articles[::5]:  # every 5th
             record = {
-                "id": hash(title),
-                "headline": title,
-                "summary": f"Detailed analysis: {title}. Market participants are closely watching...",
-                "source": source,
-                "url": f"https://example.com/{date}",
-                "datetime": pd.Timestamp(date).timestamp(),
+                "id": hash(a["title"]),
+                "headline": a["title"],
+                "summary": f"Market analysis: {a['title']}.",
+                "source": a["source"],
+                "url": a["url"],
+                "datetime": pd.Timestamp(a["seendate"]).timestamp(),
                 "category": "forex",
             }
             f.write(json.dumps(record) + "\n")
 
-    logger.info(f"Generated {len(sample_headlines)} sample news articles")
+    logger.info(f"Generated {len(articles)} synthetic English news articles (full date range)")
 
 
 def generate_central_bank_data():

@@ -487,6 +487,204 @@ def phase7_charts(every_nth: int = 5):
 
 
 # ====================================================================
+# Phase 4  — Chinese News (Sina + Eastmoney)
+# ====================================================================
+def phase4_chinese_news():
+    NEWS_CN_DIR.mkdir(parents=True, exist_ok=True)
+    got_any = False
+
+    try:
+        from phase4_news_cn import collect_sina_forex, collect_eastmoney_forex, _save_jsonl
+
+        sina = collect_sina_forex(max_pages=20)
+        if sina:
+            _save_jsonl(sina, NEWS_CN_DIR / "sina_forex.jsonl")
+            log_source("Sina/forex", "ok", n_records=len(sina))
+            got_any = True
+        else:
+            log_source("Sina/forex", "failed", "no articles")
+    except Exception as e:
+        log_source("Sina/forex", "failed", str(e)[:120])
+
+    try:
+        from phase4_news_cn import collect_eastmoney_forex, _save_jsonl
+
+        eastmoney = collect_eastmoney_forex(max_pages=20)
+        if eastmoney:
+            _save_jsonl(eastmoney, NEWS_CN_DIR / "eastmoney_forex.jsonl")
+            log_source("Eastmoney/forex", "ok", n_records=len(eastmoney))
+            got_any = True
+        else:
+            log_source("Eastmoney/forex", "failed", "no articles")
+    except Exception as e:
+        log_source("Eastmoney/forex", "failed", str(e)[:120])
+
+    if not got_any:
+        logger.info("  Generating synthetic Chinese news (fallback)...")
+        _generate_cn_news_synthetic()
+        log_source("synthetic/news_cn", "ok", "fallback")
+
+
+def _generate_cn_news_synthetic():
+    """Generate synthetic Chinese forex news across the full date range."""
+    NEWS_CN_DIR.mkdir(parents=True, exist_ok=True)
+    np.random.seed(123)
+
+    templates_cn = [
+        "人民币兑美元中间价报{rate:.4f}，{dir}{pips}个基点",
+        "离岸人民币{dir2}破{level}关口，日内{chg}",
+        "央行：保持人民币汇率在合理均衡水平上基本稳定",
+        "外汇储备{month}末为{reserves}亿美元，环比{dir3}{delta}亿",
+        "中美贸易谈判{progress}，市场情绪{sentiment}",
+        "美联储{action}利率，美元指数{dxy_dir}",
+        "跨境资金流动总体{flow}，外汇市场供求基本平衡",
+        "在岸离岸价差{spread_dir}至{spread}点，资本管制压力{pressure}",
+        "国家统计局：{month}制造业PMI为{pmi}，{pmi_dir}预期",
+        "中国{quarter}季度GDP同比增长{gdp}%，{gdp_dir}市场预期",
+    ]
+
+    dates = pd.bdate_range(start=START_DATE, end=END_DATE)
+    articles = []
+    for d in dates:
+        if np.random.random() > 0.3:  # ~70% of days have news
+            n_articles = np.random.randint(1, 4)
+            for _ in range(n_articles):
+                tmpl = np.random.choice(templates_cn)
+                title = tmpl.format(
+                    rate=np.random.uniform(6.3, 7.4),
+                    dir=np.random.choice(["上调", "下调"]),
+                    dir2=np.random.choice(["升值", "贬值"]),
+                    dir3=np.random.choice(["增加", "减少"]),
+                    pips=np.random.randint(5, 300),
+                    level=np.random.choice(["6.8", "7.0", "7.1", "7.2", "7.3"]),
+                    chg=np.random.choice(["涨超200点", "跌超150点", "波动加大", "窄幅震荡"]),
+                    month=np.random.choice(["1月", "2月", "3月", "6月", "9月", "12月"]),
+                    reserves=np.random.randint(30000, 33000),
+                    delta=np.random.randint(20, 200),
+                    progress=np.random.choice(["取得积极进展", "仍存在分歧", "即将重启"]),
+                    sentiment=np.random.choice(["偏乐观", "趋于谨慎", "有所改善"]),
+                    action=np.random.choice(["维持", "上调", "下调"]),
+                    dxy_dir=np.random.choice(["走强", "走弱", "震荡"]),
+                    flow=np.random.choice(["稳定", "波动加大", "趋于平衡"]),
+                    spread_dir=np.random.choice(["扩大", "收窄"]),
+                    spread=np.random.randint(50, 500),
+                    pressure=np.random.choice(["上升", "缓解", "基本稳定"]),
+                    pmi=round(np.random.uniform(48.5, 52.5), 1),
+                    pmi_dir=np.random.choice(["高于", "低于", "符合"]),
+                    quarter=np.random.choice(["一", "二", "三", "四"]),
+                    gdp=round(np.random.uniform(4.0, 6.5), 1),
+                    gdp_dir=np.random.choice(["超出", "低于", "符合"]),
+                )
+                articles.append({
+                    "title": title,
+                    "date": d.strftime("%Y-%m-%d"),
+                    "source": "synthetic",
+                    "language": "zh",
+                })
+
+    out = NEWS_CN_DIR / "sina_forex.jsonl"
+    with open(out, "w", encoding="utf-8") as f:
+        for a in articles:
+            f.write(json.dumps(a, ensure_ascii=False) + "\n")
+    logger.info(f"  Generated {len(articles)} synthetic Chinese news articles")
+
+
+# ====================================================================
+# Phase 6  — Sentiment Scoring
+# ====================================================================
+def phase6_sentiment():
+    SENTIMENT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Check if news data exists
+    en_files = list(NEWS_EN_DIR.glob("*.jsonl")) if NEWS_EN_DIR.exists() else []
+    cn_files = list(NEWS_CN_DIR.glob("*.jsonl")) if NEWS_CN_DIR.exists() else []
+    if not en_files and not cn_files:
+        log_source("sentiment", "skipped", "no news data")
+        return
+
+    # Try FinBERT for English
+    try:
+        from transformers import pipeline as hf_pipeline
+        logger.info("  Loading FinBERT for English sentiment...")
+        classifier = hf_pipeline(
+            "sentiment-analysis", model="ProsusAI/finbert",
+            truncation=True, max_length=512, device=-1,
+        )
+        texts, sources = [], []
+        for f in en_files:
+            with open(f) as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    rec = json.loads(line)
+                    t = rec.get("title") or rec.get("headline") or ""
+                    s = rec.get("summary", "")
+                    combined = f"{t}. {s}".strip()
+                    if len(combined) > 10:
+                        texts.append(combined[:512])
+                        sources.append(f.name)
+
+        if texts:
+            results = classifier(texts, batch_size=32)
+            df = pd.DataFrame({
+                "text": texts, "source": sources,
+                "label": [r["label"] for r in results],
+                "score": [r["score"] for r in results],
+            })
+            df.to_parquet(SENTIMENT_DIR / "en_sentiment.parquet")
+            log_source("FinBERT/en", "ok", n_records=len(df))
+        else:
+            log_source("FinBERT/en", "skipped", "no texts")
+
+    except ImportError:
+        log_source("FinBERT/en", "skipped", "transformers not installed")
+    except Exception as e:
+        log_source("FinBERT/en", "failed", str(e)[:120])
+
+    # Keyword-based fallback sentiment for Chinese
+    if cn_files:
+        _keyword_sentiment_cn(cn_files)
+
+
+def _keyword_sentiment_cn(cn_files):
+    """Simple keyword-based sentiment for Chinese news (no model needed)."""
+    pos_kw = ["升值", "走强", "上涨", "乐观", "改善", "超出预期", "增长",
+              "稳定", "平衡", "积极", "回升", "扩大顺差"]
+    neg_kw = ["贬值", "走弱", "下跌", "悲观", "恶化", "低于预期", "下滑",
+              "动荡", "外流", "收紧", "施压", "关税"]
+
+    records = []
+    for f in cn_files:
+        with open(f) as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                title = rec.get("title", "")
+                date = rec.get("date", "")
+                pos = sum(1 for k in pos_kw if k in title)
+                neg = sum(1 for k in neg_kw if k in title)
+                if pos > neg:
+                    label = "positive"
+                elif neg > pos:
+                    label = "negative"
+                else:
+                    label = "neutral"
+                score = max(pos, neg) / (pos + neg + 1)
+                records.append({
+                    "text": title, "date": date, "source": f.name,
+                    "label": label, "score": score,
+                })
+
+    if records:
+        df = pd.DataFrame(records)
+        df.to_parquet(SENTIMENT_DIR / "cn_sentiment.parquet")
+        log_source("keyword/cn_sentiment", "ok", n_records=len(df))
+
+
+# ====================================================================
 # Phase 8  — Alignment  (delegates to updated phase8_alignment.py)
 # ====================================================================
 def phase8_align():
@@ -496,12 +694,24 @@ def phase8_align():
 
 
 # ====================================================================
+# Phase 9  — LLM Explanations
+# ====================================================================
+def phase9_explanations():
+    try:
+        from phase9_explanations import main as explain_main
+        explain_main()
+        log_source("explanations", "ok")
+    except Exception as e:
+        log_source("explanations", "failed", str(e)[:120])
+
+
+# ====================================================================
 # Main
 # ====================================================================
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fast", action="store_true",
-                        help="Skip chart generation")
+                        help="Skip chart generation and LLM explanations")
     parser.add_argument("--chart-every", type=int, default=5,
                         help="Generate charts every Nth day (default 5)")
     args = parser.parse_args()
@@ -523,13 +733,21 @@ def main():
     logger.info("\n▸ Phase 2 — Macroeconomic Data")
     phase2_macro()
 
-    # ── Phase 3: News ──
+    # ── Phase 3: English News ──
     logger.info("\n▸ Phase 3 — English News")
     phase3_news()
+
+    # ── Phase 4: Chinese News ──
+    logger.info("\n▸ Phase 4 — Chinese News")
+    phase4_chinese_news()
 
     # ── Phase 5: Central Bank ──
     logger.info("\n▸ Phase 5 — Central Bank Communications")
     phase5_central_bank()
+
+    # ── Phase 6: Sentiment ──
+    logger.info("\n▸ Phase 6 — Sentiment Scoring")
+    phase6_sentiment()
 
     # ── Phase 7: Charts ──
     if not args.fast:
@@ -541,6 +759,13 @@ def main():
     # ── Phase 8: Alignment ──
     logger.info("\n▸ Phase 8 — Timestamp Alignment & Assembly")
     phase8_align()
+
+    # ── Phase 9: Explanations ──
+    if not args.fast:
+        logger.info("\n▸ Phase 9 — LLM Explanations")
+        phase9_explanations()
+    else:
+        log_source("explanations", "skipped", "--fast flag")
 
     # ── Save collection log ──
     METADATA_DIR.mkdir(parents=True, exist_ok=True)

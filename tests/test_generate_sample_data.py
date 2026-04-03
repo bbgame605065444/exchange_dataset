@@ -92,7 +92,7 @@ class TestGenerateNewsData:
             mod.generate_news_data()
         with open(tmp_path / "gdelt_cnhusd.jsonl") as f:
             records = [json.loads(line) for line in f if line.strip()]
-        assert len(records) == 20
+        assert len(records) > 500  # full 5-year range generates many articles
         assert all("title" in r for r in records)
         assert all("url" in r for r in records)
 
