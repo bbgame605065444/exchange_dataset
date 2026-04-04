@@ -15,6 +15,8 @@ import pandas as pd
 from config import (
     START_DATE, END_DATE,
     TIMESERIES_DIR, MACRO_DIR, NEWS_EN_DIR, CENTRAL_BANK_DIR,
+    HOURLY_DIR, MINUTE_DIR,
+    HOURLY_LOOKBACK_DAYS, MINUTE_LOOKBACK_DAYS,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -233,6 +235,81 @@ def generate_news_data():
     logger.info(f"Generated {len(articles)} synthetic English news articles (full date range)")
 
 
+def _generate_intraday_price(dates_index, base_price=6.8, return_std=0.001):
+    """Generate synthetic intraday OHLCV on arbitrary DatetimeIndex."""
+    n = len(dates_index)
+    returns = np.random.normal(0.00001, return_std, n)
+    prices = [base_price]
+    for r in returns[1:]:
+        mean_rev = -0.0005 * (prices[-1] - 7.0)
+        prices.append(prices[-1] * (1 + r + mean_rev))
+    close = np.array(prices)
+    bar_range = np.abs(np.random.normal(0.003, 0.001, n))
+    high = close + bar_range * close * 0.5
+    low = close - bar_range * close * 0.5
+    open_price = close + np.random.normal(0, 0.0003, n) * close
+    volume = np.random.lognormal(12, 1, n).astype(int)
+    return pd.DataFrame({
+        "Open": open_price, "High": high, "Low": low,
+        "Close": close, "Volume": volume,
+    }, index=dates_index)
+
+
+def generate_hourly_price_data(output_dir=None):
+    """Generate synthetic hourly OHLCV data (~1 year of hourly bars)."""
+    out_dir = output_dir or HOURLY_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(days=HOURLY_LOOKBACK_DAYS)
+    # Business-hours only: Mon-Fri, approximate forex hours
+    dates = pd.date_range(start=start, end=end, freq="h")
+    # Filter to weekdays only (forex market)
+    dates = dates[dates.weekday < 5]
+
+    cnh = _generate_intraday_price(dates, base_price=6.8, return_std=0.0008)
+    cnh.index.name = "Datetime"
+    ohlcv_path = out_dir / "USDCNH_hourly_ohlcv.parquet"
+    cnh.to_parquet(ohlcv_path)
+    logger.info(f"Generated hourly OHLCV: {len(cnh)} rows -> {ohlcv_path}")
+
+    # Technical indicators
+    sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+    from phase1_price_technical import compute_technical_indicators
+    tech = compute_technical_indicators(cnh)
+    tech_path = out_dir / "hourly_technical_indicators.parquet"
+    tech.to_parquet(tech_path)
+    logger.info(f"Generated hourly technical indicators: {len(tech.columns)} columns")
+    return cnh
+
+
+def generate_minute_price_data(output_dir=None):
+    """Generate synthetic minute OHLCV data (~7 days of minute bars)."""
+    out_dir = output_dir or MINUTE_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(days=MINUTE_LOOKBACK_DAYS)
+    dates = pd.date_range(start=start, end=end, freq="min")
+    # Filter to weekdays only
+    dates = dates[dates.weekday < 5]
+
+    cnh = _generate_intraday_price(dates, base_price=6.8, return_std=0.0001)
+    cnh.index.name = "Datetime"
+    ohlcv_path = out_dir / "USDCNH_minute_ohlcv.parquet"
+    cnh.to_parquet(ohlcv_path)
+    logger.info(f"Generated minute OHLCV: {len(cnh)} rows -> {ohlcv_path}")
+
+    # Technical indicators
+    sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+    from phase1_price_technical import compute_technical_indicators
+    tech = compute_technical_indicators(cnh)
+    tech_path = out_dir / "minute_technical_indicators.parquet"
+    tech.to_parquet(tech_path)
+    logger.info(f"Generated minute technical indicators: {len(tech.columns)} columns")
+    return cnh
+
+
 def generate_central_bank_data():
     """Generate sample central bank data."""
     CENTRAL_BANK_DIR.mkdir(parents=True, exist_ok=True)
@@ -262,6 +339,20 @@ def generate_central_bank_data():
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--intraday", choices=["1h", "1m"],
+                        help="Generate only a specific intraday dataset")
+    args, _ = parser.parse_known_args()
+
+    if args.intraday:
+        # Called as fallback from phase1 intraday collection
+        if args.intraday == "1h":
+            generate_hourly_price_data()
+        else:
+            generate_minute_price_data()
+        return
+
     logger.info("=" * 60)
     logger.info("Generating sample data for pipeline testing")
     logger.info("=" * 60)
@@ -273,6 +364,13 @@ def main():
     # Technical indicators
     logger.info("\n=== Technical Indicators ===")
     generate_technical_indicators(cnh)
+
+    # Intraday data
+    logger.info("\n=== Hourly Data ===")
+    generate_hourly_price_data()
+
+    logger.info("\n=== Minute Data ===")
+    generate_minute_price_data()
 
     # Macro data
     logger.info("\n=== Macro Data ===")

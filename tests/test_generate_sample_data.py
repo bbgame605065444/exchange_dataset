@@ -113,3 +113,69 @@ class TestGenerateCentralBankData:
             records = [json.loads(line) for line in f if line.strip()]
         labels = {r["label"] for r in records}
         assert labels.issubset({"hawkish", "dovish", "neutral"})
+
+
+class TestGenerateHourlyPriceData:
+    def test_creates_hourly_parquet(self, tmp_path):
+        import generate_sample_data as mod
+        hourly_dir = tmp_path / "hourly"
+        hourly_dir.mkdir()
+        with patch.object(mod, "HOURLY_DIR", hourly_dir):
+            cnh = mod.generate_hourly_price_data(output_dir=hourly_dir)
+        assert isinstance(cnh, pd.DataFrame)
+        assert (hourly_dir / "USDCNH_hourly_ohlcv.parquet").exists()
+        assert len(cnh) > 1000
+
+    def test_hourly_price_range(self, tmp_path):
+        import generate_sample_data as mod
+        hourly_dir = tmp_path / "hourly"
+        hourly_dir.mkdir()
+        with patch.object(mod, "HOURLY_DIR", hourly_dir):
+            cnh = mod.generate_hourly_price_data(output_dir=hourly_dir)
+        assert cnh["Close"].min() > 5.0
+        assert cnh["Close"].max() < 9.0
+
+    def test_hourly_high_ge_low(self, tmp_path):
+        import generate_sample_data as mod
+        hourly_dir = tmp_path / "hourly"
+        hourly_dir.mkdir()
+        with patch.object(mod, "HOURLY_DIR", hourly_dir):
+            cnh = mod.generate_hourly_price_data(output_dir=hourly_dir)
+        assert (cnh["High"] >= cnh["Low"]).all()
+
+    def test_hourly_tech_indicators_created(self, tmp_path):
+        import generate_sample_data as mod
+        hourly_dir = tmp_path / "hourly"
+        hourly_dir.mkdir()
+        with patch.object(mod, "HOURLY_DIR", hourly_dir):
+            mod.generate_hourly_price_data(output_dir=hourly_dir)
+        assert (hourly_dir / "hourly_technical_indicators.parquet").exists()
+
+
+class TestGenerateMinutePriceData:
+    def test_creates_minute_parquet(self, tmp_path):
+        import generate_sample_data as mod
+        minute_dir = tmp_path / "minute"
+        minute_dir.mkdir()
+        with patch.object(mod, "MINUTE_DIR", minute_dir):
+            cnh = mod.generate_minute_price_data(output_dir=minute_dir)
+        assert isinstance(cnh, pd.DataFrame)
+        assert (minute_dir / "USDCNH_minute_ohlcv.parquet").exists()
+        assert len(cnh) > 1000
+
+    def test_minute_price_range(self, tmp_path):
+        import generate_sample_data as mod
+        minute_dir = tmp_path / "minute"
+        minute_dir.mkdir()
+        with patch.object(mod, "MINUTE_DIR", minute_dir):
+            cnh = mod.generate_minute_price_data(output_dir=minute_dir)
+        assert cnh["Close"].min() > 5.0
+        assert cnh["Close"].max() < 9.0
+
+    def test_minute_tech_indicators_created(self, tmp_path):
+        import generate_sample_data as mod
+        minute_dir = tmp_path / "minute"
+        minute_dir.mkdir()
+        with patch.object(mod, "MINUTE_DIR", minute_dir):
+            mod.generate_minute_price_data(output_dir=minute_dir)
+        assert (minute_dir / "minute_technical_indicators.parquet").exists()

@@ -85,3 +85,9 @@ CHART_LOOKBACKS = {
     "60d": 60,
 }
 CHART_SIZE = (384, 384)  # pixels, ViT-friendly
+
+# === Intraday Data ===
+HOURLY_DIR = TIMESERIES_DIR / "hourly"
+MINUTE_DIR = TIMESERIES_DIR / "minute"
+HOURLY_LOOKBACK_DAYS = 365   # ~1 year of hourly bars
+MINUTE_LOOKBACK_DAYS = 7     # ~7 days of minute bars (yfinance max)

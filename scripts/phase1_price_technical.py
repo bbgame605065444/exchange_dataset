@@ -10,12 +10,18 @@ import logging
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
 
 import pandas as pd
-import yfinance as yf
+
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None
 
 from config import (
     START_DATE, END_DATE,
     TICKER_CNH, TICKER_CNY, TICKER_DXY, TICKER_VIX,
     TIMESERIES_DIR, TECH_PARAMS,
+    HOURLY_DIR, MINUTE_DIR,
+    HOURLY_LOOKBACK_DAYS, MINUTE_LOOKBACK_DAYS,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -24,6 +30,9 @@ logger = logging.getLogger(__name__)
 
 def download_ticker(ticker: str, name: str) -> pd.DataFrame:
     """Download daily OHLCV data from yfinance."""
+    if yf is None:
+        logger.warning("yfinance not installed")
+        return pd.DataFrame()
     logger.info(f"Downloading {name} ({ticker})...")
     df = yf.download(ticker, start=START_DATE, end=END_DATE, interval="1d", progress=False)
     if df.empty:
@@ -120,6 +129,111 @@ def compute_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def download_ticker_intraday(ticker: str, name: str, interval: str = "1h",
+                             lookback_days: int = 365) -> pd.DataFrame:
+    """Download intraday OHLCV data from yfinance.
+
+    Parameters
+    ----------
+    ticker : yfinance ticker symbol
+    name : human-readable label for logging
+    interval : '1h' or '1m'
+    lookback_days : how many calendar days back to fetch
+    """
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(days=lookback_days)
+
+    if interval not in ("1h", "1m"):
+        raise ValueError(f"Unsupported interval: {interval}")
+
+    if yf is None:
+        logger.warning("yfinance not installed")
+        return pd.DataFrame()
+
+    logger.info(f"Downloading {name} ({ticker}) {interval} data, {start.date()} -> {end.date()}...")
+
+    if interval == "1h":
+        # yfinance allows up to ~730 days for hourly; chunk if needed
+        chunk_size = 700
+        frames = []
+        chunk_start = start
+        while chunk_start < end:
+            chunk_end = min(chunk_start + pd.Timedelta(days=chunk_size), end)
+            try:
+                df = yf.download(ticker, start=chunk_start.strftime("%Y-%m-%d"),
+                                 end=chunk_end.strftime("%Y-%m-%d"),
+                                 interval="1h", progress=False)
+                if not df.empty:
+                    frames.append(df)
+            except Exception as e:
+                logger.warning(f"  Chunk {chunk_start.date()}-{chunk_end.date()} failed: {e}")
+            chunk_start = chunk_end
+            time.sleep(0.3)
+        if not frames:
+            logger.warning(f"No hourly data returned for {ticker}")
+            return pd.DataFrame()
+        df = pd.concat(frames)
+    elif interval == "1m":
+        # yfinance allows max 7 days for minute data
+        start = end - pd.Timedelta(days=min(lookback_days, 7))
+        try:
+            df = yf.download(ticker, start=start.strftime("%Y-%m-%d"),
+                             end=end.strftime("%Y-%m-%d"),
+                             interval="1m", progress=False)
+        except Exception as e:
+            logger.warning(f"Minute download failed for {ticker}: {e}")
+            return pd.DataFrame()
+
+    if df.empty:
+        logger.warning(f"No {interval} data returned for {ticker}")
+        return df
+
+    # Flatten multi-level columns if present
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    # Deduplicate index
+    df = df[~df.index.duplicated(keep="first")].sort_index()
+    logger.info(f"  {name} {interval}: {len(df)} rows, {df.index[0]} to {df.index[-1]}")
+    return df
+
+
+def collect_intraday():
+    """Collect hourly and minute OHLCV + technical indicators for CNH."""
+    for interval, out_dir, lookback in [
+        ("1h", HOURLY_DIR, HOURLY_LOOKBACK_DAYS),
+        ("1m", MINUTE_DIR, MINUTE_LOOKBACK_DAYS),
+    ]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        label = "hourly" if interval == "1h" else "minute"
+
+        try:
+            cnh = download_ticker_intraday(TICKER_CNH, "USD/CNH", interval, lookback)
+        except Exception as e:
+            logger.warning(f"yfinance intraday error ({interval}): {e}")
+            cnh = pd.DataFrame()
+
+        if cnh.empty:
+            logger.warning(f"No {label} data from yfinance. Falling back to synthetic.")
+            import subprocess
+            subprocess.run([
+                sys.executable,
+                str(__import__("pathlib").Path(__file__).parent / "generate_sample_data.py"),
+                "--intraday", interval,
+            ])
+            continue
+
+        # Save OHLCV
+        ohlcv_path = out_dir / f"USDCNH_{label}_ohlcv.parquet"
+        cnh.to_parquet(ohlcv_path)
+        logger.info(f"Saved {label} OHLCV: {ohlcv_path}")
+
+        # Compute and save technical indicators
+        tech = compute_technical_indicators(cnh)
+        tech_path = out_dir / f"{label}_technical_indicators.parquet"
+        tech.to_parquet(tech_path)
+        logger.info(f"Saved {label} technical indicators: {len(tech.columns)} columns")
+
+
 def main():
     TIMESERIES_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -189,6 +303,10 @@ def main():
     logger.info(f"  VIX: {len(vix)} trading days")
     logger.info(f"  Technical indicators: {len(tech.columns)} features")
     logger.info(f"  Date range: {cnh.index[0].date()} to {cnh.index[-1].date()}")
+
+    # === Intraday data (hourly + minute) ===
+    logger.info("\n=== Intraday Data Collection ===")
+    collect_intraday()
 
 
 if __name__ == "__main__":
