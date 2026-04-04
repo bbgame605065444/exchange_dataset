@@ -104,3 +104,47 @@ class TestDownloadTicker:
         # Will fail due to network, but should return empty DataFrame gracefully
         result = download_ticker("INVALID_TICKER_XYZ", "test")
         assert isinstance(result, pd.DataFrame)
+
+
+class TestDownloadTickerIntraday:
+    def test_intraday_returns_dataframe(self):
+        from phase1_price_technical import download_ticker_intraday
+        # Will fail due to network, but should return empty DataFrame gracefully
+        result = download_ticker_intraday("INVALID_TICKER_XYZ", "test", "1h", 7)
+        assert isinstance(result, pd.DataFrame)
+
+    def test_intraday_invalid_interval(self):
+        from phase1_price_technical import download_ticker_intraday
+        with pytest.raises(ValueError, match="Unsupported interval"):
+            download_ticker_intraday("CNH=X", "test", "3h", 7)
+
+
+class TestIntradayTechIndicators:
+    """Verify tech indicators work correctly on intraday (hourly/minute) data."""
+
+    def test_hourly_tech_indicators(self, sample_hourly_ohlcv):
+        from phase1_price_technical import compute_technical_indicators
+        result = compute_technical_indicators(sample_hourly_ohlcv)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(sample_hourly_ohlcv)
+        assert result.shape[1] == 15
+
+    def test_minute_tech_indicators(self, sample_minute_ohlcv):
+        from phase1_price_technical import compute_technical_indicators
+        result = compute_technical_indicators(sample_minute_ohlcv)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(sample_minute_ohlcv)
+        assert result.shape[1] == 15
+
+    def test_hourly_bollinger_ordering(self, sample_hourly_ohlcv):
+        from phase1_price_technical import compute_technical_indicators
+        result = compute_technical_indicators(sample_hourly_ohlcv)
+        valid = result.dropna()
+        assert (valid["bb_upper"] >= valid["bb_middle"]).all()
+        assert (valid["bb_middle"] >= valid["bb_lower"]).all()
+
+    def test_minute_rsi_range(self, sample_minute_ohlcv):
+        from phase1_price_technical import compute_technical_indicators
+        result = compute_technical_indicators(sample_minute_ohlcv)
+        valid = result["rsi_14"].dropna()
+        assert (valid >= 0).all() and (valid <= 100).all()

@@ -31,8 +31,10 @@ from config import (
     FRED_API_KEY, FINNHUB_API_KEY,
     FRED_SERIES, GDELT_KEYWORDS, TECH_PARAMS,
     CHART_LOOKBACKS, CHART_SIZE,
+    HOURLY_DIR, MINUTE_DIR,
+    HOURLY_LOOKBACK_DAYS, MINUTE_LOOKBACK_DAYS,
 )
-from phase1_price_technical import compute_technical_indicators
+from phase1_price_technical import compute_technical_indicators, download_ticker_intraday
 
 logging.basicConfig(
     level=logging.INFO,
@@ -142,6 +144,48 @@ def phase1_synthetic() -> pd.DataFrame:
     generate_technical_indicators(cnh)
     log_source("synthetic/prices", "ok", "fallback", n_records=len(cnh))
     return cnh
+
+
+# ====================================================================
+# Phase 1b — Intraday Price Data (hourly + minute)
+# ====================================================================
+def phase1_intraday():
+    """Download hourly and minute OHLCV + technical indicators."""
+    for interval, out_dir, lookback, label in [
+        ("1h", HOURLY_DIR, HOURLY_LOOKBACK_DAYS, "hourly"),
+        ("1m", MINUTE_DIR, MINUTE_LOOKBACK_DAYS, "minute"),
+    ]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            cnh = download_ticker_intraday(TICKER_CNH, "USD/CNH", interval, lookback)
+        except Exception as e:
+            log_source(f"yfinance/{label}", "failed", str(e)[:120])
+            cnh = pd.DataFrame()
+
+        if cnh.empty:
+            log_source(f"yfinance/{label}", "failed", "no data returned")
+            continue
+
+        ohlcv_path = out_dir / f"USDCNH_{label}_ohlcv.parquet"
+        cnh.to_parquet(ohlcv_path)
+        log_source(f"yfinance/{label}", "ok", n_records=len(cnh))
+
+        tech = compute_technical_indicators(cnh)
+        tech_path = out_dir / f"{label}_technical_indicators.parquet"
+        tech.to_parquet(tech_path)
+        log_source(f"technical/{label}", "ok", n_records=len(tech.columns))
+
+        gaussian_sleep(0.5, 0.15)
+
+
+def phase1_intraday_synthetic():
+    """Generate synthetic intraday data as fallback."""
+    logger.info("  Generating synthetic intraday data (fallback)...")
+    from generate_sample_data import generate_hourly_price_data, generate_minute_price_data
+    generate_hourly_price_data()
+    generate_minute_price_data()
+    log_source("synthetic/hourly", "ok", "fallback")
+    log_source("synthetic/minute", "ok", "fallback")
 
 
 # ====================================================================
@@ -728,6 +772,15 @@ def main():
     cnh = phase1_prices()
     if cnh is None:
         cnh = phase1_synthetic()
+
+    # ── Phase 1b: Intraday ──
+    logger.info("\n▸ Phase 1b — Intraday Price Data (hourly + minute)")
+    phase1_intraday()
+    # Check if any intraday files were created; fallback to synthetic if not
+    hourly_ok = (HOURLY_DIR / "USDCNH_hourly_ohlcv.parquet").exists()
+    minute_ok = (MINUTE_DIR / "USDCNH_minute_ohlcv.parquet").exists()
+    if not hourly_ok or not minute_ok:
+        phase1_intraday_synthetic()
 
     # ── Phase 2: Macro ──
     logger.info("\n▸ Phase 2 — Macroeconomic Data")

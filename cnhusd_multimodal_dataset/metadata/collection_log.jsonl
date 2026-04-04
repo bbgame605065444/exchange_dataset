@@ -1,19 +1,23 @@
-{"source": "yfinance/CNH", "status": "failed", "detail": "no data returned", "n_records": 0, "ts": "2026-04-03T12:27:51.451274+00:00"}
-{"source": "synthetic/prices", "status": "ok", "detail": "fallback", "n_records": 1369, "ts": "2026-04-03T12:27:51.501108+00:00"}
-{"source": "FRED", "status": "skipped", "detail": "FRED_API_KEY not set", "n_records": 0, "ts": "2026-04-03T12:27:51.501257+00:00"}
-{"source": "synthetic/macro", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:27:51.517350+00:00"}
-{"source": "GDELT", "status": "ok", "detail": "", "n_records": 0, "ts": "2026-04-03T12:28:01.321896+00:00"}
-{"source": "Finnhub/news", "status": "skipped", "detail": "FINNHUB_API_KEY not set", "n_records": 0, "ts": "2026-04-03T12:28:01.322041+00:00"}
-{"source": "synthetic/news", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:28:01.703532+00:00"}
-{"source": "Sina/forex", "status": "failed", "detail": "no articles", "n_records": 0, "ts": "2026-04-03T12:28:04.614651+00:00"}
-{"source": "Eastmoney/forex", "status": "failed", "detail": "no articles", "n_records": 0, "ts": "2026-04-03T12:28:06.199915+00:00"}
-{"source": "synthetic/news_cn", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:28:06.510461+00:00"}
-{"source": "HuggingFace/FOMC", "status": "skipped", "detail": "datasets not installed", "n_records": 0, "ts": "2026-04-03T12:28:06.510754+00:00"}
-{"source": "Fed/statements", "status": "failed", "detail": "HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /monetarypolicy/fomccalenda", "n_records": 0, "ts": "2026-04-03T12:28:06.516176+00:00"}
-{"source": "Finnhub/calendar", "status": "skipped", "detail": "no key", "n_records": 0, "ts": "2026-04-03T12:28:06.516331+00:00"}
-{"source": "synthetic/central_bank", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-03T12:28:06.516720+00:00"}
-{"source": "FinBERT/en", "status": "skipped", "detail": "transformers not installed", "n_records": 0, "ts": "2026-04-03T12:28:06.517173+00:00"}
-{"source": "keyword/cn_sentiment", "status": "ok", "detail": "", "n_records": 1923, "ts": "2026-04-03T12:28:06.530886+00:00"}
-{"source": "charts", "status": "skipped", "detail": "--fast flag", "n_records": 0, "ts": "2026-04-03T12:28:06.531166+00:00"}
-{"source": "alignment", "status": "ok", "detail": "", "n_records": 0, "ts": "2026-04-03T12:28:08.135796+00:00"}
-{"source": "explanations", "status": "skipped", "detail": "--fast flag", "n_records": 0, "ts": "2026-04-03T12:28:08.135851+00:00"}
+{"source": "yfinance", "status": "skipped", "detail": "library not installed", "n_records": 0, "ts": "2026-04-04T06:52:46.341785+00:00"}
+{"source": "synthetic/prices", "status": "ok", "detail": "fallback", "n_records": 1369, "ts": "2026-04-04T06:52:46.395934+00:00"}
+{"source": "yfinance/hourly", "status": "failed", "detail": "no data returned", "n_records": 0, "ts": "2026-04-04T06:52:46.396288+00:00"}
+{"source": "yfinance/minute", "status": "failed", "detail": "no data returned", "n_records": 0, "ts": "2026-04-04T06:52:46.396489+00:00"}
+{"source": "synthetic/hourly", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-04T06:52:46.468700+00:00"}
+{"source": "synthetic/minute", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-04T06:52:46.468804+00:00"}
+{"source": "FRED", "status": "skipped", "detail": "FRED_API_KEY not set", "n_records": 0, "ts": "2026-04-04T06:52:46.468909+00:00"}
+{"source": "synthetic/macro", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-04T06:52:46.482632+00:00"}
+{"source": "GDELT", "status": "skipped", "detail": "gdeltdoc not installed", "n_records": 0, "ts": "2026-04-04T06:52:46.482873+00:00"}
+{"source": "Finnhub/news", "status": "skipped", "detail": "FINNHUB_API_KEY not set", "n_records": 0, "ts": "2026-04-04T06:52:46.482916+00:00"}
+{"source": "synthetic/news", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-04T06:52:46.791515+00:00"}
+{"source": "Sina/forex", "status": "failed", "detail": "No module named 'bs4'", "n_records": 0, "ts": "2026-04-04T06:52:46.845698+00:00"}
+{"source": "Eastmoney/forex", "status": "failed", "detail": "No module named 'bs4'", "n_records": 0, "ts": "2026-04-04T06:52:46.846360+00:00"}
+{"source": "synthetic/news_cn", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-04T06:52:47.100973+00:00"}
+{"source": "HuggingFace/FOMC", "status": "skipped", "detail": "datasets not installed", "n_records": 0, "ts": "2026-04-04T06:52:47.101242+00:00"}
+{"source": "Fed/statements", "status": "failed", "detail": "No module named 'bs4'", "n_records": 0, "ts": "2026-04-04T06:52:47.101380+00:00"}
+{"source": "Finnhub/calendar", "status": "skipped", "detail": "no key", "n_records": 0, "ts": "2026-04-04T06:52:47.101414+00:00"}
+{"source": "synthetic/central_bank", "status": "ok", "detail": "fallback", "n_records": 0, "ts": "2026-04-04T06:52:47.101727+00:00"}
+{"source": "FinBERT/en", "status": "skipped", "detail": "transformers not installed", "n_records": 0, "ts": "2026-04-04T06:52:47.102081+00:00"}
+{"source": "keyword/cn_sentiment", "status": "ok", "detail": "", "n_records": 1923, "ts": "2026-04-04T06:52:47.113263+00:00"}
+{"source": "charts", "status": "skipped", "detail": "--fast flag", "n_records": 0, "ts": "2026-04-04T06:52:47.113472+00:00"}
+{"source": "alignment", "status": "ok", "detail": "", "n_records": 0, "ts": "2026-04-04T06:52:48.487730+00:00"}
+{"source": "explanations", "status": "skipped", "detail": "--fast flag", "n_records": 0, "ts": "2026-04-04T06:52:48.487812+00:00"}

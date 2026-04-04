@@ -143,3 +143,45 @@ def sample_central_bank_jsonl(tmp_data_dir):
         }) + "\n")
 
     return fomc_path, fed_path
+
+
+@pytest.fixture(scope="session")
+def sample_hourly_ohlcv():
+    """Generate a small hourly OHLCV DataFrame for testing."""
+    np.random.seed(99)
+    n = 500
+    dates = pd.date_range(start="2025-06-01", periods=n, freq="h")
+    close = 7.0 + np.cumsum(np.random.normal(0, 0.002, n))
+    return pd.DataFrame({
+        "Open": close + np.random.normal(0, 0.001, n),
+        "High": close + np.abs(np.random.normal(0.003, 0.001, n)),
+        "Low": close - np.abs(np.random.normal(0.003, 0.001, n)),
+        "Close": close,
+        "Volume": np.random.randint(500, 50000, n),
+    }, index=dates)
+
+
+@pytest.fixture(scope="session")
+def sample_minute_ohlcv():
+    """Generate a small minute OHLCV DataFrame for testing."""
+    np.random.seed(101)
+    n = 500
+    dates = pd.date_range(start="2025-06-01", periods=n, freq="min")
+    close = 7.0 + np.cumsum(np.random.normal(0, 0.0003, n))
+    return pd.DataFrame({
+        "Open": close + np.random.normal(0, 0.0001, n),
+        "High": close + np.abs(np.random.normal(0.001, 0.0005, n)),
+        "Low": close - np.abs(np.random.normal(0.001, 0.0005, n)),
+        "Close": close,
+        "Volume": np.random.randint(100, 10000, n),
+    }, index=dates)
+
+
+@pytest.fixture(scope="session")
+def tmp_intraday_dirs(tmp_data_dir):
+    """Create hourly and minute subdirectories."""
+    hourly = tmp_data_dir / "timeseries" / "hourly"
+    minute = tmp_data_dir / "timeseries" / "minute"
+    hourly.mkdir(parents=True, exist_ok=True)
+    minute.mkdir(parents=True, exist_ok=True)
+    return hourly, minute
